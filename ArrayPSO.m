@@ -16,13 +16,13 @@ nvars = 3; %# of array elements = nvars + 1; 1 assumed fixed at origin
 population = 20;
 neighborhood_size = 3; %number of particles in a neighborhood
 
+space_lim = 7e-3; %spacing between patch centers; patch dimensions = 3.5mm x 3.5mm; 
 global min_position max_position %originally declared global for use in plottng functions
-min_position = lambda/4;
-max_position = 2.5*lambda;
+min_position = space_lim; %intrinsically restricts the particle closest to origin 
+max_position = 3.5*lambda;
 
 vel_lims = [lambda/32,lambda/8]; %velocity magnitude min/max
 pos_lims = [min_position, max_position]; 
-space_lim = 4e-3;
 
 max_it = 500;
 
@@ -59,7 +59,7 @@ iteration = 1;
 
 while (iteration <= max_it)
     for p = swarm_arr
-        p.evaluate(SLLFunc);
+        p.evaluate(SLLFunc); 
     end
    
     updateLocalBest(swarm_arr);
