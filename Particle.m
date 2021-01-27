@@ -32,8 +32,7 @@ classdef Particle < handle
             obj.spacing_lim = spacing_lim;
             
             %po_lims = [min pos, max pos]
-            obj.position = rand(d,1).*(po_lims(2) - po_lims(1)) ...
-                + min(po_lims(1));
+            obj.position = obj.getRandPos();   
            
             %vel_lims = [minimum vel mag, max vel mag]
             obj.velocity = rand(d,1).*(ve_lims(2)-ve_lims(1))+ vel_lims(1);
@@ -83,19 +82,10 @@ classdef Particle < handle
             %a ceiling; enforced on individual dimensions 
             lims = sort(obj.p_lims);
             p = obj.position;
-            %replace elements above lim(2) with lim(2)
-            p(p > lims(2)) = lims(2);
-            %replace elements below lim(1) with lim(1)
-            p(p < lims(1)) = lims(1);
-            
-            %ensure consecutive positions are sufficiently spaced
-            difference = diff(sort(p)); %get space between consecutive elements
-            if (any(find(abs(difference) < obj.spacing_lim)) || p(1) < obj.spacing_lim) 
-                p = rand(obj.dims,1).*(obj.p_lims(2) - obj.p_lims(1)) ...
-                + min(obj.p_lims(1));
-            end
+            if any(p < lims(1)) || any(p > lims(2)) || any(diff(sort(p)) < obj.spacing_lim)
+                p = obj.getRandPos();
+            end     
             obj.position = p;
-            
         end    
                 
         function enforceVelLimits(obj)
@@ -112,9 +102,24 @@ classdef Particle < handle
             
             obj.velocity = v;
         end
-                
+        
+        function pos = getRandPos(obj)
+            % Return a randomly-generatged array of positions satisfying position and spacing
+            % limits
+            p = rand(obj.dims,1).*(max(obj.p_lims) - min(obj.p_lims)) + min(obj.p_lims);
+            difference = diff(sort(p)); %get space between consecutive elements
+            while (any(abs(difference) < obj.spacing_lim)) 
+                p = rand(obj.dims,1).*(max(obj.p_lims) - min(obj.p_lims)) + min(obj.p_lims);
+                difference = diff(sort(p));
+            end
+            pos = p;
+        end
+        
         function plot(obj, CostObj)
             CostObj.plot(obj.position);
         end
     end
 end
+
+
+
