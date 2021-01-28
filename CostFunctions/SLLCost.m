@@ -8,6 +8,8 @@ classdef SLLCost < Problem
         theta
         tolerance = 1e-10
         element_pattern
+        search_mode = 'valley'
+        optim_mode = "arrayfactor"
         
     end
     
@@ -35,26 +37,38 @@ classdef SLLCost < Problem
                 cost = inf; %replace with error handling in future?
             else
                 AF = obj.getAF(positions,false); %get unnormalized AF
+                AF2 = abs(AF).^2;
+                if obj.optim_mode == "fullpattern"
+                    AF2 = AF2.*obj.element_pattern;
+                elseif obj.optim_mode ~= "arrayfactor"
+                    e_str = "Usage Error: SLLCost.optim_mode accepted values" + newline;
+                    e_str = e_str + "fullpattern" + newline;
+                    e_str = e_str + "arrayfactor";
+                    error(e_str)
+                end
                 
-                %normalize
-                AF_max = max(AF);
-                ind_max = find(abs(AF_max - AF) < obj.tolerance); %get indices of global maxes
-                %AF = AF./AF_max;
-                AF = AF.*obj.element_pattern;
+                AF2_max = max(AF2);
+                ind_max = find(abs(AF2_max - AF2) < obj.tolerance); %get indices of global maxes
                 
                 %%% Find SLL Finding
+                if (obj.search_mode == "valley")
                 %Using Valley Finder
-                ind_vall = find(islocalmin(abs(AF)));
-                n = sort([ind_vall(:); ind_max(:)]); %sorted indices of valleys and main lobe peaks
-                null1 = n(find(n == ind_max(1)) + 1); %find valley/null closest to first main lobe
-                null2 = n(find(n == ind_max(2)) - 1); %find valley/null closest to rear lobe; SECOND INDEX MAY NOT BET REAR LOBE
-                max_SLL = max(AF(null1:null2));
-                
-%                 %Using Peak Finder
-%                 ind_peak = find(islocalmax(abs(AF))); %find indices of peaks (detection may cause problems)
-%                 ind_side = setdiff(ind_peak,ind_max); %remove index of max peak; gives indices of side lobe peaks
-%                 max_SLL = max(AF(ind_side));
-                
+                    ind_vall = find(islocalmin(AF2));
+                    n = sort([ind_vall(:); ind_max(:)]); %sorted indices of valleys and main lobe peaks
+                    null1 = n(find(n == ind_max(1)) + 1); %find valley/null closest to first main lobe
+                    null2 = n(find(n == ind_max(2)) - 1); %find valley/null closest to rear lobe; SECOND INDEX MAY NOT BET REAR LOBE
+                    max_SLL = max(AF2(null1:null2));
+                elseif (obj.search_mode == "peak")
+                %Using Peak Finder
+                    ind_peak = find(islocalmax(AF2)); %find indices of peaks (detection may cause problems)
+                    ind_side = setdiff(ind_peak,ind_max); %remove index of max peak; gives indices of side lobe peaks
+                    max_SLL = max(AF2(ind_side));
+                else
+                    e_str = "Usage Error: SLLCost.search_mode accepted values" + newline;
+                    e_str = e_str + "peak" + newline;
+                    e_str = e_str + "valley";
+                    error(e_str)
+                end
                 cost = abs(max_SLL);
                 
                 %Plotting for debug
@@ -91,6 +105,10 @@ classdef SLLCost < Problem
                     AF = AF./max(AF);
                 end
             end
+        end
+        function Rad = getFullPattern(obj,pos)
+            AF = obj.getAF(pos,false);
+            Rad = (abs(AF).^2).*obj.element_pattern;
         end
     end
 end
