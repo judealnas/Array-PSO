@@ -1,3 +1,6 @@
+% Jude Alnas
+% University of Alabama
+
 clear
 clc
 close all
@@ -14,12 +17,12 @@ lambda = c/freq0/sqrt(Dk);
 
 nvars = 3; %# of array elements = nvars + 1; 1 assumed fixed at origin
 population = 20;
-neighborhood_size = 3; %number of particles in a neighborhood
+neighborhood_size = 5; %number of particles in a neighborhood
 
 space_lim = 7e-3; %spacing between patch centers; patch dimensions = 3.5mm x 3.5mm; 
 global min_position max_position %originally declared global for use in plottng functions
 min_position = space_lim; %intrinsically restricts the particle closest to origin 
-max_position = 3.5*lambda;
+max_position = 4*lambda;
 
 vel_lims = [lambda/32,lambda/8]; %velocity magnitude min/max
 pos_lims = [min_position, max_position]; 
@@ -32,6 +35,9 @@ SLLFunc.Dk = Dk;
 SLLFunc.freq0 = freq0;
 SLLFunc.element_pattern = 10.^(uStripPatch27GHz1x4ArrayPattern.dBGainTotal_1./10);
 SLLFunc.theta = uStripPatch27GHz1x4ArrayPattern.Thetadeg;
+SLLFunc.search_mode = "valley";
+SLLFunc.optim_mode = "fullpattern";
+
 
 %gbest parameters - globals for use in updateGlobalBest function
 global g_best_cost g_best_pos g_best_particle
@@ -39,9 +45,9 @@ g_best_cost = Inf;
 g_best_pos = NaN;
 
 %weights
-w_vel = 0; %inertia
-w_glob = 1.1; %@(x) x*1; 
-w_loc = 0; %@(x) 1 - x;
+w_vel = 1; %inertia
+w_glob = 0.5; %@(x) x*1; 
+w_loc = 0.5; %@(x) 1 - x;
 w_per = 1;
 
 weights = [w_vel, w_glob, w_loc, w_per];
@@ -84,18 +90,61 @@ while (iteration <= max_it)
 end
 
 %% Plotting
+% g_best_pos = [0.021096598402695;0.007074494374363;0.014085880612923];
+
 x = SLLFunc.theta;
-y = SLLFunc.getAF(g_best_pos,true);
+%note this function returns AF*EF = rad pattern
+y = SLLFunc.getFullPattern(g_best_pos);
+
+hfss_x = uStripPatch27GHz1x4Opt7.Thetadeg;
+hfss_y = uStripPatch27GHz1x4Opt7.dBGainTotal;
+
+%Rectangular plot comparing result, AF, and EF
+% figure()
+% hold on
+% plot(x, y, 'DisplayName', 'Full Pattern')
+% plot(x, abs(SLLFunc.getAF(g_best_pos)).^2,'DisplayName','AF^2');
+% plot(x, SLLFunc.element_pattern,'DisplayName','EF');
+% hold off
+% legend
+% xlabel("Theta (deg)")
+% ylabel("Gain")
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%Rectangular plot comparing result, AF, and EF in dB
+% figure()
+% title("Decibel Patterns")
+% hold on
+% plot(x, db(y,'power'),'DisplayName','Full Pattern')
+% plot(x, db(abs(SLLFunc.getAF(g_best_pos)).^2,'power'),'DisplayName','AF');
+% plot(x, db(SLLFunc.element_pattern,'power'),'DisplayName','EF');
+% hold off
+% legend
+% xlabel("Theta (deg)")
+% ylabel("Gain (dB)")
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%Polar plots comparing result, AF, and EF in dB
 figure()
-plot(x, (abs(y)))
-xlabel("Theta (deg)")
-ylabel("abs(AF)")
+title("Decibel Patterns")
+polarplot(deg2rad(x),db(y,'power'), ...
+          deg2rad(x),db(abs(SLLFunc.getAF(g_best_pos)).^2,'power'), ...
+          deg2rad(x),db(SLLFunc.element_pattern,'power'));
+legend('FullPattern','AF','EF')
+ax = gca;
+ax.ThetaZeroLocation = 'top';
+rlim([-50 50])
+
+%polar plots comparing calculated result with HFSS simulation
 figure()
-plot(x, db(abs(y)))
-xlabel("Theta (deg)")
-ylabel("db(AF)")
-figure()
-polarplot(deg2rad(x),abs(y))
+polarplot(deg2rad(x),db(y,'power'), ...
+          deg2rad(x),uStripPatch27GHz1x4Opt7.dBGainTotal);
+legend('Calculated','HFSS');
+ax = gca;
+ax.ThetaZeroLocation = 'top';
+rlim([-50 50])
+
+
 % for i = 1:max_it
 %     if i == 2 || i == max_it
 %         figure() %put first and last swarm states in separate figures
