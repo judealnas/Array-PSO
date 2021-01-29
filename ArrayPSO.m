@@ -90,14 +90,14 @@ while (iteration <= max_it)
 end
 
 %% Plotting
-% g_best_pos = [0.021096598402695;0.007074494374363;0.014085880612923];
+ g_best_pos = [0.021096598402695;0.007074494374363;0.014085880612923];
 
 x = SLLFunc.theta;
 %note this function returns AF*EF = rad pattern
 y = SLLFunc.getFullPattern(g_best_pos);
 
-hfss_x = uStripPatch27GHz1x4Opt7.Thetadeg;
-hfss_y = uStripPatch27GHz1x4Opt7.dBGainTotal;
+hfss_x = Opt_7_1_14_1_21_1.Thetadeg;
+hfss_y = Opt_7_1_14_1_21_1.dBGainTotalFreq27GHzPhi900000000000002deg;
 
 %Rectangular plot comparing result, AF, and EF
 % figure()
@@ -138,7 +138,7 @@ rlim([-50 50])
 %polar plots comparing calculated result with HFSS simulation
 figure()
 polarplot(deg2rad(x),db(y,'power'), ...
-          deg2rad(x),uStripPatch27GHz1x4Opt7.dBGainTotal);
+          deg2rad(hfss_x),hfss_y);
 legend('Calculated','HFSS');
 ax = gca;
 ax.ThetaZeroLocation = 'top';
