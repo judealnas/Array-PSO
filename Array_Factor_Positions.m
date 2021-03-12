@@ -9,6 +9,7 @@ freq0 = 27e9; %Operating frequency of 28 GHz
 lambda = c/freq0/sqrt(Dk);
 k = 2*pi/lambda; %phase constant
 theta = (0:0.04:360)'; %degree angle
+phi = (0:0.04:180)'; %degree angle
 d = 1*lambda/4;   %uniform element spacing in meters
 % d = 5.56e-3
 D = (0:1:N-1)*d;   %array of element positions
