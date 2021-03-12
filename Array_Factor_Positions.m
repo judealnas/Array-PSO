@@ -2,19 +2,22 @@ close all
 
 %%
 c = physconst('LightSpeed');
-N = 6; %# of elements
+N = 10; %# of elements
 Ai = ones(N,1); %Feeding Coefficient
 Dk = 1; %substrate relative permittivity/dielectric constant
 freq0 = 27e9; %Operating frequency of 28 GHz
 lambda = c/freq0/sqrt(Dk);
 k = 2*pi/lambda; %phase constant
 theta = (0:0.04:360)'; %degree angle
-d = 1*lambda/2;   %uniform element spacing in meters
+d = 1*lambda/4;   %uniform element spacing in meters
 % d = 5.56e-3
 D = (0:1:N-1)*d;   %array of element positions
 % D = [0; 0.014277499428709;0.007014985734191;0.029036206480868]
+scan_angle_deg = 30; %scan angle of phased array
+rlim_low_db = -40; %smallest dB value shown on rad patter; used to remove extreme nulls from data 
 %% Calculate AF
 Exp_arr = exp(1i*k*sin(deg2rad(theta))*D(:)');
+Ai = exp(-1i*k*sin(deg2rad(scan_angle_deg))*D(:));
 AF = Exp_arr*Ai;
 AF2 = abs(AF).^2;
 AF2(AF2 == 0) = NaN;
@@ -52,7 +55,6 @@ y2 = zeros(size(theta));
 y2(ind_vall) = 1;
 
 %Replacing nulls with NaN to eliminate spikes
-rlim_low_db = -20;
 AF2_norm = AF2/AF2_max;
 
 figure()
