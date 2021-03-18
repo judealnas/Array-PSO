@@ -11,21 +11,27 @@ freq0 = 27e9; %Operating frequency of 28 GHz
 lambda = c/freq0/sqrt(Dk);
 k = 2*pi/lambda; %phase constant
 
-theta = (-90:1:90); %degree angle
+theta = (0:1:180); %degree angle
 phi = (0:1:360);
 
-Gam_x = cos(deg2rad(phi(:)))*sin(deg2rad(theta(:)))';
-Gam_y = sin(deg2rad(phi(:)))*sin(deg2rad(theta(:)))';
-
-d = 2*lambda/2;   %uniform element spacing in meters
+d = 1*lambda/2;   %uniform element spacing in meters
 
 D = (0:1:Nx-1)*d;   %array of element positions
 Dx = (0:1:Nx-1)'*d*ones(1,Ny); %cols=vector of distances from y-axis, rows=which column of elements
 Dy = ones(Nx,1)*(0:1:Ny-1)*d; %cols=which row of elements, rows= vector of distances from x-axis
 
 scan_theta_deg = 30; %scan angle of phased array
-scan_phi_deg = 30; %scan angle of phased array
-rlim_low_db = -40; %smallest dB value shown on rad patter; used to remove extreme nulls from data 
+scan_phi_deg = 45; %scan angle of phased array
+
+x_cart = cos(deg2rad(phi(:)))*sin(deg2rad(theta(:)))';
+y_cart = sin(deg2rad(phi(:)))*sin(deg2rad(theta(:)))';
+
+% Phase shifted axes used for calculation;
+Gam_x = x_cart - sin(deg2rad(scan_theta_deg))*cos(deg2rad(scan_phi_deg)); 
+Gam_y = y_cart - sin(deg2rad(scan_theta_deg))*sin(deg2rad(scan_phi_deg)); 
+
+%smallest dB value shown on rad patter; used to remove extreme nulls from data 
+rlim_low_db = -40; 
 %% Calculate AF
 AFx = zeros(size(Gam_x));
 AFy = zeros(size(Gam_x));
@@ -34,19 +40,43 @@ for col= 1:size(Dx,2)
     %reshape the column of Dx into a 1-1-Nx matrix
     %each element then multiplies the 2D Gam_x, creating a 3D matrix
     %Sum along the third dimension to return a 2D matrix
-    AFx = AFx + sum(exp(1i*k*reshape(Dx(:,col),1,1,[]).*Gam_x),3);
+    AFx = AFx + sum(reshape(Ai(:,col),1,1,[]).*exp(1i*k*reshape(Dx(:,col),1,1,[]).*Gam_x),3);
 end
 
 for row = 1:size(Dy,1)
-    AFy = AFy + sum(exp(1i*k*reshape(Dy(row,:),1,1,[]).*Gam_y),3);
+    AFy = AFy + sum(reshape(Ai(row,:),1,1,[]).*exp(1i*k*reshape(Dy(row,:),1,1,[]).*Gam_y),3);
 end
 
-AF = Ai .* AFx .* AFy;
-AF2 = abs(AF/max(AF)).^2;
-AF2_norm = AF2./max(AF2);
+AF = AFx .* AFy;
+AF_max = max(AF,[],'all');
+AF_norm = AF./AF_max;
 
-s = surf(Gam_x, Gam_y, AF2);
-s.EdgeColor = 'none';
+AF2 = abs(AF).^2;
+AF2_max = max(AF2,[],'all');
+AF2_norm = AF2./AF2_max;
+
+figure()
+s1 = surf(x_cart, y_cart,abs(AF_norm));
+s1.EdgeColor = 'none';
+
+%% Converting to cylindrical
+x_cyl = cos(deg2rad(phi(:)))*theta(:)';
+y_cyl = sin(deg2rad(phi(:)))*theta(:)';
+figure()
+s2 = surf(x_cyl, y_cyl,abs(AF_norm));
+s2.EdgeColor = 'none';
+xlim([-90 90])
+ylim([-90 90])
+xlabel('Phi=0 Plane')
+ylabel('Phi=90 Plane')
+
+%% Converting to Spherical
+[x, y, z] = sph2cart(x_cart,y_cart,abs(AF_norm));
+figure()
+s3 = surf(z,y,x);
+s3.EdgeColor = 'none';
+
+
 %% Peak Finding
 %Locate indices of peaks; remove index of main lobe; calculate max of remaining peaks
 
@@ -64,7 +94,7 @@ s.EdgeColor = 'none';
 % ind_side = setdiff(ind_peak,ind_max); %remove index of boresights; gives indices of side lobe peaks
 % 
 % [max_SLL2, ind2_max_SLL] = max(AF2(ind_side)); %ind2 = second-order index, an index to retrieve ANOTHER index
-% max_SLL2 == AF2(ind_side(ind2_max_SLL));
+% max_SLL2 == AF2(ind_side(ind2_max_ZSLL));
 % 
 % %% Plot
 % %data to plot located SL peaks
