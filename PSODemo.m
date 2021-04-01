@@ -21,8 +21,8 @@ neighborhood_size = 3; %number of particles in a neighborhood
 
 space_lim = 7e-3; %spacing between patch centers; patch dimensions = 3.5mm x 3.5mm; 
 global min_position max_position %originally declared global for use in plottng functions
-min_position = -512; %intrinsically restricts the particle closest to origin 
-max_position = 512;
+min_position = -10; %intrinsically restricts the particle closest to origin 
+max_position = 10;
 
 vel_lims = [0,15]; %velocity magnitude min/max
 pos_lims = [min_position, max_position]; 
@@ -30,18 +30,18 @@ pos_lims = [min_position, max_position];
 max_it = 100;
 
 %Create cost function
-SLLFunc = Eggholder(); %particle positions = element distances from origin
-func_name = "eggholder";
+SLLFunc = Rastrigin(nvars); %particle positions = element distances from origin
+func_name = "rastrigin";
 %gbest parameters - globals for use in updateGlobalBest function
 global g_best_cost g_best_pos g_best_particle
 g_best_cost = Inf; 
 g_best_pos = NaN;
 
 %weights
-w_vel = 1; %inertia
-w_glob = 0.15; %@(x) x*1; 
-w_loc = 0.85; %@(x) 1 - x;
-w_per = 1;
+w_vel = 0.5; %inertia
+w_glob = 0.5; %@(x) x*1; 
+w_loc = 0.5; %@(x) 1 - x;
+w_per = 0.25;
 
 weights = [w_vel, w_glob, w_loc, w_per];
 %% Swarm Init
