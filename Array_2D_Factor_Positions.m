@@ -26,23 +26,24 @@ phi = linspace(0,2*pi,500);
 % Dy: size = [Nx Ny]; The value in the ith row, jth column
 %            is the distance in y from the x-axis of the element
 %            in the corresponding row & column 
-d = 1*lambda;   %uniform element spacing in meters
+d = 4*lambda;   %uniform element spacing in meters
 D = (0:1:Nx-1)*d;   %array of element positions
 [Dx, Dy] = meshgrid(D);
 
 % scanning angle
-scan_theta = deg2rad(0); %scan angle of phased array
-scan_phi   = deg2rad(-50); %scan angle of phased array
+scan_theta_deg = 0
+scan_phi_deg = 80
+scan_theta = deg2rad(scan_theta_deg); %scan angle of phased array
+scan_phi   = deg2rad(scan_phi_deg); %scan angle of phased array
 
 %Cartesian axes
 x_cart = sin(Theta).*cos(Phi);
 y_cart = sin(Theta).*sin(Phi);
 
 % Per elment scanning angle phase shifts
-beta_x = sin(scan_theta)*cos(scan_phi);
-beta_y = sin(scan_theta)*sin(scan_phi);
 Beta_x = -k*Dx*sin(scan_theta)*cos(scan_phi);
 Beta_y = -k*Dy*sin(scan_theta)*sin(scan_phi);
+Beta = Beta_x + Beta_y;
 
 %smallest dB value shown on rad patter; used to remove extreme nulls from data 
 rlim_low_db = -40; 
@@ -56,7 +57,7 @@ for i = 1:Nx % iterate in x-direction (i.e. cols or dim 2)
         dx = Dx(j,i); % x location of current antenna element
         dy = Dy(j,i); % y location of current antenna element
         a = Ai(j,i);  % feed amplitude of current antenna element
-        beta = Beta_x(j,i) + Beta_y(j,i); % total phase of current antenna element
+        beta = Beta(j,i); % total phase of current antenna element
         AF = AF + a*exp(1i*(k*(dx*x_cart + dy*y_cart) + beta));
     end
 end
@@ -69,33 +70,79 @@ AF2 = abs(AF).^2;
 AF2_norm = AF2./AF2_max;
 
 %% Peak Detection
-input = abs(AF2_norm); % select which array factor form to process
+input = abs(AF_norm); % select which array factor form to process
 
 % obtaining all peaks and their indices
-TF = imregionalmax(input);
-[ind_max_row, ind_max_col] = find(TF);
-ind_peaks = [ind1, ind2];
+TF = imregionalmax(input);  
+TF_1 = islocalmax(input,1); % local maxima along dimension 1
+TF_2 = islocalmax(input,2); % local maxima along dimension 2
+TF_intersect = TF_1 & TF_2; % Maxima that exist in both dimensions
 
-% removing the global peak
-peaks = input(TF);
-subpeaks = find(peaks(peaks < max(peaks));
-[SLL, ind_SLL]= max(peaks(peaks ~= input_max));
-ind_SLL = [ind_max_input(ind_SLL,1) ind_max_input(ind_SLL,2)];
-%% Figure 1 plots spatially wihtin unit circle
+% vector subset of just the detected local maxima amplitudes and their
+% linear indices relative to input
+mag_local_maxima = input(TF_intersect); 
+idx_local_maxima = find(TF_intersect);
+
+% searches subset of local maxima for the global maxima and its linear
+% index RELATIVE TO SUBSET. Use this to index idx_local_maxima to obtain
+% the linear index of the global max relative to input
+[glob_max, tempidx_glob_max] = max(mag_local_maxima);
+idx_glob_max = idx_local_maxima(tempidx_glob_max);
+
+[SLL, tempidx_SLL] = max(mag_local_maxima( (glob_max - mag_local_maxima) > 1E3  ));
+idx_SLL = idx_local_maxima(tempidx_SLL);
+
+%% Plots against angle in rectangular
+figure();
+patternCustom(input, rad2deg(theta), rad2deg(phi), 'CoordinateSystem', 'rectangular')
+% s0 = surf(Theta, Phi, input);
+% s0.EdgeColor = 'none';
+xlabel('Theta', 'Interpreter', 'latex')
+ylabel('Phi', 'Interpreter', 'latex')
+hold on
+
+% plot points at all detected maxima
+plot3(rad2deg(Theta(TF_intersect)),...
+      rad2deg(Phi(TF_intersect)),...
+      input(TF_intersect), 'y.', 'MarkerSize', 15);
+
+% points at the global max
+plot3(rad2deg(Theta(idx_glob_max)),...
+      rad2deg(Phi(idx_glob_max)),...
+      input(idx_glob_max), 'g.','MarkerSize', 20);
+  
+% points at detected SLL
+plot3(rad2deg(Theta(idx_SLL)),...
+      rad2deg(Phi(idx_SLL)),...
+      input(idx_SLL), 'rd','MarkerSize', 25);
+hold off
+%% Figure plots spatially wihtin unit circle
 figure() 
 z_cart = input;
 s1 = surf(x_cart, y_cart,z_cart);
 s1.EdgeColor = 'none';
-hold
-plot3(x_cart(TF), y_cart(TF), z_cart(TF), 'r+'); % plotting peak locations determined by imregionmax(0
-plot3(x_cart(ind_max_input(1),ind_max_input(2)),...
-      y_cart(ind_max_input(1),ind_max_input(2)),... 
-      z_cart(ind_max_input(1),ind_max_input(2)), 'gs'); % plotting the max location
-plot3(x_cart(ind_SLL(1),ind_SLL(2)),...
-      y_cart(ind_SLL(1),ind_SLL(2)),...
-      z_cart(ind_SLL(1),ind_SLL(2)), 'bp'); % plotting second highest peaks
-  hold
-%% Figure 2 plots in cylindrical coordinates 
+xlabel("X");
+ylabel("Y");
+hold on
+plot3(x_cart(TF_intersect),...
+      y_cart(TF_intersect),...
+      z_cart(TF_intersect), 'y.', 'MarkerSize', 15);
+
+% points at the global max
+plot3(x_cart(idx_glob_max),...
+      y_cart(idx_glob_max),...
+      z_cart(idx_glob_max), 'g.','MarkerSize', 20);
+  
+% points at detected SLL
+plot3(x_cart(idx_SLL),...
+      y_cart(idx_SLL),...
+      z_cart(idx_SLL), 'rd','MarkerSize', 15);
+
+% plot3(x_cart(TF_intersect), y_cart(TF_intersect), z_cart(TF_intersect), 'r.','MarkerSize', 25);
+
+
+hold off
+%% Plots in cylindrical coordinates 
 % Radius maps to elevation scanning angle
 % Azimuthal angle maps to aimuthal scanning angle
 % Height (z) maps to abs(AF)
@@ -112,15 +159,6 @@ ylim(cyl_ax_limits)
 xlabel('Phi=0 Plane', 'Interpreter', 'latex')
 ylabel('Phi=$\pi/2$ Plane', 'Interpreter', 'latex')
 
-%% Converting to Spherical
-% sph_ax_lims = [-1 1];
-% [x, y, z] = sph2cart(Phi,Theta,input);
-% figure() % Figure 3
-% s3 = surf(x,y,z);
-% xlim(sph_ax_lims)
-% ylim(sph_ax_lims)
-% % zlim([0 1])
-% s3.EdgeColor = 'none';
-
+%% Plotting in Spherical
 figure()
 patternCustom(input, rad2deg(theta), rad2deg(phi), 'CoordinateSystem', 'polar')
