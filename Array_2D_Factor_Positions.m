@@ -26,13 +26,13 @@ phi = linspace(0,2*pi,500);
 % Dy: size = [Nx Ny]; The value in the ith row, jth column
 %            is the distance in y from the x-axis of the element
 %            in the corresponding row & column 
-d = 4*lambda;   %uniform element spacing in meters
+d = 1/2*lambda;   %uniform element spacing in meters
 D = (0:1:Nx-1)*d;   %array of element positions
 [Dx, Dy] = meshgrid(D);
 
 % scanning angle
-scan_theta_deg = 0
-scan_phi_deg = 80
+scan_theta_deg = 20;
+scan_phi_deg = 0;
 scan_theta = deg2rad(scan_theta_deg); %scan angle of phased array
 scan_phi   = deg2rad(scan_phi_deg); %scan angle of phased array
 
@@ -89,7 +89,10 @@ idx_local_maxima = find(TF_intersect);
 [glob_max, tempidx_glob_max] = max(mag_local_maxima);
 idx_glob_max = idx_local_maxima(tempidx_glob_max);
 
-[SLL, tempidx_SLL] = max(mag_local_maxima( (glob_max - mag_local_maxima) > 1E3  ));
+% Remove global max index from idx_local_maxima. 
+% Largest of remaining peaks is SLL.
+idx_side_maxima = idx_local_maxima(idx_local_maxima ~= idx_glob_max);
+[SLL, tempidx_SLL] = max(input(idx_side_maxima));
 idx_SLL = idx_local_maxima(tempidx_SLL);
 
 %% Plots against angle in rectangular
@@ -100,6 +103,16 @@ patternCustom(input, rad2deg(theta), rad2deg(phi), 'CoordinateSystem', 'rectangu
 xlabel('Theta', 'Interpreter', 'latex')
 ylabel('Phi', 'Interpreter', 'latex')
 hold on
+
+% plot points at all detected maxima
+plot3(rad2deg(Theta(TF_1)),...
+      rad2deg(Phi(TF_1)),...
+      input(TF_1), 'y.', 'MarkerSize', 15);
+
+% plot points at all detected maxima
+plot3(rad2deg(Theta(TF_2)),...
+      rad2deg(Phi(TF_2)),...
+      input(TF_2), 'y.', 'MarkerSize', 15);
 
 % plot points at all detected maxima
 plot3(rad2deg(Theta(TF_intersect)),...
@@ -124,9 +137,21 @@ s1.EdgeColor = 'none';
 xlabel("X");
 ylabel("Y");
 hold on
+
+% local maxima in dimension 1
+plot3(x_cart(TF_1),...
+      y_cart(TF_1),...
+      z_cart(TF_1), 'k.', 'MarkerSize', 15);
+
+% local maxima in dimension 2
+plot3(x_cart(TF_2),...
+      y_cart(TF_2),...
+      z_cart(TF_2), 'b.', 'MarkerSize', 15);
+
+% points at intersection
 plot3(x_cart(TF_intersect),...
       y_cart(TF_intersect),...
-      z_cart(TF_intersect), 'y.', 'MarkerSize', 15);
+      z_cart(TF_intersect), 'r.', 'MarkerSize', 50);
 
 % points at the global max
 plot3(x_cart(idx_glob_max),...
