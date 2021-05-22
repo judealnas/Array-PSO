@@ -51,22 +51,23 @@ classdef SLLCost < Problem
                 ind_max = find(abs(AF2_max - AF2) < obj.tolerance); %get indices of global maxes
                 
                 %%% Find SLL Finding
-                if (obj.search_mode == "valley")
-                %Using Valley Finder
-                    ind_vall = find(islocalmin(AF2));
-                    n = sort([ind_vall(:); ind_max(:)]); %sorted indices of valleys and main lobe peaks
-                    null1 = n(find(n == ind_max(1)) + 1); %find valley/null closest to first main lobe
-                    null2 = n(find(n == ind_max(2)) - 1); %find valley/null closest to rear lobe; SECOND INDEX MAY NOT BET REAR LOBE
-                    max_SLL = max(AF2(null1:null2));
-                elseif (obj.search_mode == "peak")
+                if (obj.search_mode == "peak")
                 %Using Peak Finder
                     ind_peak = find(islocalmax(AF2)); %find indices of peaks (detection may cause problems)
                     ind_side = setdiff(ind_peak,ind_max); %remove index of max peak; gives indices of side lobe peaks
                     max_SLL = max(AF2(ind_side));
+%                 elseif (obj.search_mode == "valley")
+                %Using Valley Finder
+                %REMOVED as it assumes symmetry
+%                     ind_vall = find(islocalmin(AF2));
+%                     n = sort([ind_vall(:); ind_max(:)]); %sorted indices of valleys and main lobe peaks
+%                     null1 = n(find(n == ind_max(1)) + 1); %find valley/null closest to first main lobe
+%                     null2 = n(find(n == ind_max(2)) - 1); %find valley/null closest to rear lobe; SECOND INDEX MAY NOT BET REAR LOBE
+%                     max_SLL = max(AF2(null1:null2));
                 else
                     e_str = "Usage Error: SLLCost.search_mode accepted values" + newline;
                     e_str = e_str + "peak" + newline;
-                    e_str = e_str + "valley";
+%                     e_str = e_str + "valley";
                     error(e_str)
                 end
                 cost = abs(max_SLL);
